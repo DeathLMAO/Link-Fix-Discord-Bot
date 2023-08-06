@@ -1,0 +1,90 @@
+import discord
+import re
+from discord.ext import commands
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+# Dictionary to store server-specific settings
+server_settings = {}
+
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user.name}')
+
+@bot.command()
+async def switch(ctx):
+    server_id = ctx.guild.id
+    if server_id in server_settings:
+        current_url = server_settings[server_id].get('replace_url', 'fxtwitter.com')
+        new_url = 'vxtwitter.com' if current_url == 'fxtwitter.com' else 'fxtwitter.com'
+        server_settings[server_id]['replace_url'] = new_url
+        await ctx.send(f"Switched replacement URL to {new_url}.")
+    else:
+        server_settings[server_id] = {'replace_url': 'fxtwitter.com'}
+        await ctx.send("Switched replacement URL to fxtwitter.com.")
+
+@bot.command()
+async def twitteroff(ctx):
+    server_id = ctx.guild.id
+    if server_id in server_settings:
+        server_settings[server_id]['replace_url'] = None
+    else:
+        server_settings[server_id] = {'replace_url': None}
+    await ctx.send("Twitter replacement is now off.")
+
+@bot.command()
+async def twitteron(ctx):
+    server_id = ctx.guild.id
+    if server_id in server_settings:
+        server_settings[server_id]['replace_url'] = 'fxtwitter.com'
+    else:
+        server_settings[server_id] = {'replace_url': 'fxtwitter.com'}
+    await ctx.send("Twitter replacement is now on.")
+
+@bot.command()
+async def instaoff(ctx):
+    server_id = ctx.guild.id
+    if server_id in server_settings:
+        server_settings[server_id]['insta_replace_url'] = None
+    else:
+        server_settings[server_id] = {'insta_replace_url': None}
+    await ctx.send("Instagram replacement is now off.")
+
+@bot.command()
+async def instaon(ctx):
+    server_id = ctx.guild.id
+    if server_id in server_settings:
+        server_settings[server_id]['insta_replace_url'] = 'www.ddinstagram.com'
+    else:
+        server_settings[server_id] = {'insta_replace_url': 'www.ddinstagram.com'}
+    await ctx.send("Instagram replacement is now on.")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    server_id = message.guild.id
+
+    # Check if the server has enabled message replacements for Twitter and Instagram links
+    replace_url = server_settings.get(server_id, {}).get('replace_url', 'fxtwitter.com')
+    insta_replace_url = server_settings.get(server_id, {}).get('insta_replace_url', 'www.ddinstagram.com')
+
+    if replace_url:
+        modified_content = re.sub(r'(https?://)twitter\.com', rf'\1{replace_url}', message.content)
+        if modified_content != message.content:
+            await message.delete()
+            await message.channel.send(f'{message.author.mention} said: {modified_content}')
+
+    if insta_replace_url:
+        modified_content = re.sub(r'(https?://)www\.instagram\.com', rf'\1{insta_replace_url}', message.content)
+        if modified_content != message.content:
+            await message.delete()
+            await message.channel.send(f'{message.author.mention} said: {modified_content}')
+
+    await bot.process_commands(message)
+#Replace TOKEN with your OWN TOKEN FOR YOUR OWN BOT
+bot.run('TOKEN')
